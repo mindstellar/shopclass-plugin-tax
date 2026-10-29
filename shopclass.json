@@ -1,0 +1,15 @@
+{
+  "$schema": "../schema/package.schema.json",
+  "slug": "tax",
+  "type": "plugin",
+  "modes": ["shop"],
+  "categories": ["integrations"],
+  "tags": ["billing", "shop", "tax", "vat", "gst", "invoice", "checkout"],
+  "short_description": "Tax on every cart and order for any country: default, country and category rates, prices with or without tax, and a tax invoice.",
+  "icon": "assets/icon.svg",
+  "license": "GPL-3.0-or-later",
+  "support": {
+    "issues": "https://github.com/mindstellar/shopclass-plugin-tax/issues",
+    "docs": "https://github.com/mindstellar/shopclass-plugin-tax#readme"
+  }
+}

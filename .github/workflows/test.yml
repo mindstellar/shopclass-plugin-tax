@@ -1,0 +1,71 @@
+# Runs the unit and integration tests on PHP 8.2 and 8.5 against core's develop
+# (SHOPCLASS_CORE_REF overrides it).
+name: test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - php: '8.2'
+            core: develop
+          - php: '8.5'
+            core: develop
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      # A skipped integration test fails the run. SHOPCLASS_CORE_REF picks another core branch.
+      REQUIRE_CORE: '1'
+      # tests/run.sh runs tests/integration/ when DRIFT_DB_PORT is set; it finds core here.
+      SHOPCLASS_CORE: ${{ github.workspace }}/osclass
+      DRIFT_DB_HOST: 127.0.0.1
+      DRIFT_DB_PORT: '3306'
+      DRIFT_DB_USER: root
+      DRIFT_DB_PASS: root
+    steps:
+      - name: Check out the plugin
+        uses: actions/checkout@v4
+        with:
+          path: plugin
+
+      - name: Check out core
+        uses: actions/checkout@v4
+        with:
+          repository: mindstellar/shopclass
+          ref: ${{ vars.SHOPCLASS_CORE_REF || matrix.core }}
+          path: osclass
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mysqli, curl, mbstring, intl
+          tools: composer
+
+      # The integration test loads core's autoloader from oc-includes/vendor.
+      - name: Install core's PHP packages
+        working-directory: osclass
+        run: composer install --no-dev --no-interaction --prefer-dist
+
+      - name: Tests
+        working-directory: plugin
+        run: ./tests/run.sh
