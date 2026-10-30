@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3
+
+### Fixed
+- An order discount lowers only the items' tax; a shipping discount lowers only the shipping tax.
+- Invoice rows show amounts in the shop's price format.
+
 ## 0.1.2
 
 ### Fixed
