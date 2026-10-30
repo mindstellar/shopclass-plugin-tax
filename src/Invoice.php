@@ -33,6 +33,8 @@ final class Invoice
         $rates = array();
         foreach ($taxLines as $line) {
             $meta  = is_array($line['meta'] ?? null) ? $line['meta'] : array();
+            // Tax worked out before the discount (an older core) is the case the note explains.
+            $hasDiscount = $hasDiscount && ($meta['after_discount'] ?? false) !== true;
             $codes = array();
             foreach (is_array($meta['lines'] ?? null) ? $meta['lines'] : array() as $entry) {
                 if (is_array($entry) && is_string($entry['code'] ?? null) && $entry['code'] !== '') {

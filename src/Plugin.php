@@ -94,24 +94,64 @@ final class Plugin
             );
             $taxable[] = $entry + self::rate($config->rates->forLine($chain, $context['country']), $entry, $context);
         }
-        if ($config->taxShipping) {
-            foreach (is_array($cart['shipping_lines'] ?? null) ? $cart['shipping_lines'] : array() as $ship) {
-                $amount = is_array($ship) ? (int) ($ship['amount'] ?? 0) : 0;
-                if ($amount <= 0) {
-                    continue;
-                }
-                $entry     = array('kind' => 'shipping', 'line' => null, 'item_id' => null, 'category_id' => 0, 'title' => (string) ($ship['label'] ?? ''), 'qty' => 1, 'amount' => $amount);
-                $taxable[] = $entry + self::rate($config->rates->forLine(array(), $context['country']), $entry, $context);
+        $untaxed = 0;
+        foreach (is_array($cart['shipping_lines'] ?? null) ? $cart['shipping_lines'] : array() as $ship) {
+            $amount = is_array($ship) ? (int) ($ship['amount'] ?? 0) : 0;
+            if ($amount <= 0) {
+                continue;
             }
+            if (!$config->taxShipping) {
+                $untaxed += $amount;
+                continue;
+            }
+            $entry     = array('kind' => 'shipping', 'line' => null, 'item_id' => null, 'category_id' => 0, 'title' => (string) ($ship['label'] ?? ''), 'qty' => 1, 'amount' => $amount);
+            $taxable[] = $entry + self::rate($config->rates->forLine(array(), $context['country']), $entry, $context);
+        }
+        $discount = 0;
+        foreach (is_array($cart['discount_lines'] ?? null) ? $cart['discount_lines'] : array() as $off) {
+            $discount += is_array($off) ? max(0, -(int) ($off['amount'] ?? 0)) : 0;
+        }
+        if ($discount > 0) {
+            $taxable = self::afterDiscount($taxable, $untaxed, $discount);
         }
 
         $default = Parts::single($config->label);
         $parts   = Parts::normalise(osc_apply_filter('tax_parts', $default, $context), $default);
         foreach ((new Calculator($config->inclusive, Currency::step($currency)))->lines($taxable, $parts) as $line) {
+            if ($discount > 0) {
+                $line['meta']['after_discount'] = true;
+            }
             $lines[] = $line + array('currency' => $currency);
         }
 
         return $lines;
+    }
+
+    /**
+     * The taxable entries with a cart discount taken off, shared over them and the untaxed
+     * shipping by value. The last share takes the rounding, so the shares add up to the discount.
+     *
+     * @param array<int,array<string,mixed>> $taxable
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    private static function afterDiscount(array $taxable, int $untaxed, int $discount): array
+    {
+        $total = $untaxed + array_sum(array_map(static fn (array $e): int => max(0, (int) $e['amount']), $taxable));
+        if ($total <= 0) {
+            return $taxable;
+        }
+        $discount = min($discount, $total);
+        $left     = $discount - (int) floor($discount * ($untaxed / $total));
+        $last     = array_key_last($taxable);
+        foreach ($taxable as $i => $entry) {
+            $amount = max(0, (int) $entry['amount']);
+            $share  = $i === $last ? $left : min($left, (int) floor($discount * ($amount / $total)));
+            $left  -= $share;
+            $taxable[$i]['amount'] = max(0, $amount - $share);
+        }
+
+        return $taxable;
     }
 
     /**

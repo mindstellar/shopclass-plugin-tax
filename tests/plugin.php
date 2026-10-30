@@ -73,6 +73,29 @@ $out = Plugin::lines(array(), $cart(), $config(array('inclusive' => true)), $cha
 // 500 / 1.05 = 476.19 -> 23.81; 100 / 1.18 = 84.75 -> 15.25.
 pin('inclusive: tax already in the prices, marked so', array(array('tax.gst.5' => m(23.81), 'tax.gst.18' => m(15.25)), array(true, true)), array($byId($out), array_column(array_column($out, 'meta'), 'included')));
 
+harness_section('discounts');
+// The task's case: ₹1,098 at 18% included, ₹150 off, so tax is 18/118 of ₹948.
+$one  = new Rates(1800);
+$shop = $cart(array(
+    'lines'          => array(array('line' => 0, 'item_id' => 1, 'category_id' => 0, 'title' => 'Lamp', 'qty' => 1, 'unit' => m(1098), 'amount' => m(1098))),
+    'subtotal'       => m(1098),
+    'shipping_lines' => array(),
+    'discount_lines' => array(array('id' => 'discount.first', 'label' => 'First order', 'amount' => -m(150), 'currency' => 'INR', 'meta' => array())),
+));
+$out = Plugin::lines(array(), $shop, $config(array('inclusive' => true, 'rates' => $one)), $chains);
+pin('included tax is on the price after the discount', array('tax.gst.18' => m(144.61)), $byId($out));
+pin('the line says the discount was taken off first', true, $out[0]['meta']['after_discount'] ?? null);
+$out = Plugin::lines(array(), $shop, $config(array('rates' => $one)), $chains);
+pin('added tax too', array('tax.gst.18' => m(170.64)), $byId($out));
+// 500 + 100 + 50 shipping, 65 off: a tenth of each.
+$out = Plugin::lines(array(), $cart(array('discount_lines' => array(array('amount' => -m(65))))), $config(array('shipping' => true)), $chains);
+pin('a discount is shared over the items and shipping by value', array('tax.gst.5' => m(22.50), 'tax.gst.18' => m(24.30)), $byId($out));
+$out = Plugin::lines(array(), $cart(array('discount_lines' => array(array('amount' => -m(65))))), $config(), $chains);
+pin('untaxed shipping keeps its share, so the items take only theirs', array('tax.gst.5' => m(22.50), 'tax.gst.18' => m(16.20)), $byId($out));
+$out = Plugin::lines(array(), $cart(array('discount_lines' => array(array('amount' => -m(9000))))), $config(), $chains);
+pin('a discount bigger than the cart leaves nothing to tax', array(), $byId($out));
+pin('no discount: no after_discount mark', false, isset(Plugin::lines(array(), $cart(), $config(), $chains)[0]['meta']['after_discount']));
+
 harness_section('shipping');
 pin('not taxed unless the setting is on', 2, count(Plugin::lines(array(), $cart(), $config(), $chains)));
 $out = Plugin::lines(array(), $cart(), $config(array('shipping' => true)), $chains);

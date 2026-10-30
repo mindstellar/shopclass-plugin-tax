@@ -37,7 +37,7 @@ With no rate table saved, the plugin adds nothing.
 - Tax on top: tax = price × rate / 100, added to the total.
 - Tax is worked out once per cart line, never per unit. It is rounded half up to the currency's smallest unit.
 - There is one tax line per rate, such as `tax.gst.18` "GST 18%". Its meta holds `bp` (basis points), `part`, `base`, `included` and the cart `lines` it covers.
-- Tax runs before discounts: core runs `cart_tax_lines` before `cart_discount_lines`. A discounted order's invoice says so.
+- Tax is worked out on the prices after discounts: core runs `cart_discount_lines` first, and a cart discount is shared over the items and shipping by value. On an older core that taxes first, a discounted order's invoice says so.
 - All amounts are computed on the server from core's cart. Nothing in the request sets a rate or amount.
 - Invoice: when an order carries this plugin's tax, its receipt becomes a tax invoice. It shows your title (default "Tax invoice"), tax number, place of supply (buyer's state and country), taxable value and tax codes per rate, and your footer.
 
