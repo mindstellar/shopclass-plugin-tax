@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+### Fixed
+- Tax is worked out on prices after discounts.
+
 ## 0.1.1
 
 ### Changed
