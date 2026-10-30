@@ -120,6 +120,11 @@ foreach ($cart as $entry) {
 }
 pin('inclusive: base + tax is the price on every line', 0, $sum);
 
+harness_section('amounts not in whole paise');
+$odd = $incl->line(54_361_234, 1800);
+pin('inclusive: the tax is still whole paise and base + tax is the price', array(0, 54_361_234), array($odd['tax'] % 10000, $odd['base'] + $odd['tax']));
+pin('inclusive: 18/118 of 54.361234 is 8.29', m(8.29), $odd['tax']);
+
 harness_section('step floor');
 pin('a step of 0 counts as 1', array('base' => 7, 'tax' => 1), (new Calculator(false, 0))->line(7, 1800));
 pin('a negative step counts as 1', array('base' => 7, 'tax' => 1), (new Calculator(false, -5))->line(7, 1800));

@@ -53,8 +53,10 @@ final class Calculator
         $bp = min($bp, self::MAX_BP);
         if ($this->inclusive) {
             $base = self::mulDivRound($amount, 10000, (10000 + $bp) * $this->step) * $this->step;
+            // An amount off the step (after a discount) still gives tax in whole steps.
+            $tax = self::mulDivRound(max(0, $amount - $base), 1, $this->step) * $this->step;
 
-            return array('base' => $base, 'tax' => $amount - $base);
+            return array('base' => $amount - $tax, 'tax' => $tax);
         }
 
         return array('base' => $amount, 'tax' => self::mulDivRound($amount, $bp, 10000 * $this->step) * $this->step);

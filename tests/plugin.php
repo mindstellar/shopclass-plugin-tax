@@ -87,11 +87,31 @@ pin('included tax is on the price after the discount', array('tax.gst.18' => m(1
 pin('the line says the discount was taken off first', true, $out[0]['meta']['after_discount'] ?? null);
 $out = Plugin::lines(array(), $shop, $config(array('rates' => $one)), $chains);
 pin('added tax too', array('tax.gst.18' => m(170.64)), $byId($out));
-// 500 + 100 + 50 shipping, 65 off: a tenth of each.
-$out = Plugin::lines(array(), $cart(array('discount_lines' => array(array('amount' => -m(65))))), $config(array('shipping' => true)), $chains);
-pin('a discount is shared over the items and shipping by value', array('tax.gst.5' => m(22.50), 'tax.gst.18' => m(24.30)), $byId($out));
-$out = Plugin::lines(array(), $cart(array('discount_lines' => array(array('amount' => -m(65))))), $config(), $chains);
-pin('untaxed shipping keeps its share, so the items take only theirs', array('tax.gst.5' => m(22.50), 'tax.gst.18' => m(16.20)), $byId($out));
+// 500 + 100 + 50 shipping, 60 off the order: a tenth of each item, nothing off the shipping.
+$out = Plugin::lines(array(), $cart(array('discount_lines' => array(array('amount' => -m(60))))), $config(array('shipping' => true)), $chains);
+pin('an order discount is shared over the items by value, not the shipping', array('tax.gst.5' => m(22.50), 'tax.gst.18' => m(25.20)), $byId($out));
+$out = Plugin::lines(array(), $cart(array('discount_lines' => array(array('amount' => -m(60))))), $config(), $chains);
+pin('untaxed shipping takes no share either', array('tax.gst.5' => m(22.50), 'tax.gst.18' => m(16.20)), $byId($out));
+$freeShip = array('discount_lines' => array(array('id' => 'promo.ship', 'amount' => -m(50), 'meta' => array('applies_to' => 'shipping'))));
+$out = Plugin::lines(array(), $cart($freeShip), $config(array('shipping' => true)), $chains);
+pin('a free delivery discount comes off the taxed shipping only', array('tax.gst.5' => m(25), 'tax.gst.18' => m(18)), $byId($out));
+$out = Plugin::lines(array(), $cart($freeShip), $config(), $chains);
+pin('and leaves the items alone when shipping is not taxed', array('tax.gst.5' => m(25), 'tax.gst.18' => m(18)), $byId($out));
+pin('a discount off untaxed shipping changes no tax, so no mark', false, isset($out[0]['meta']['after_discount']));
+// The 8010 cases: a 499 tee, 18% included, 79 delivery not taxed.
+$tee = static fn (array $off): array => $cart(array(
+    'lines'          => array(array('line' => 0, 'item_id' => 1, 'category_id' => 0, 'title' => 'Tee', 'qty' => 1, 'unit' => m(499), 'amount' => m(499))),
+    'subtotal'       => m(499),
+    'shipping_lines' => array(array('id' => 'shipping.standard', 'label' => 'Standard', 'amount' => m(79))),
+    'discount_lines' => $off,
+));
+$incl = $config(array('inclusive' => true, 'rates' => $one));
+$out  = Plugin::lines(array(), $tee(array(array('amount' => -m(79), 'meta' => array('applies_to' => 'shipping')))), $incl, $chains);
+pin('free delivery on a 499 tee: tax on the full 499', array('tax.gst.18' => m(76.12)), $byId($out));
+$out = Plugin::lines(array(), $tee(array(array('amount' => -m(100)))), $incl, $chains);
+pin('100 off a 499 tee with paid delivery: tax on 399', array(m(60.86), m(338.14)), array($out[0]['amount'], $out[0]['meta']['base']));
+$out = Plugin::lines(array(), $cart(array('discount_lines' => array(array('amount' => -m(33.333333))))), $config(array('inclusive' => true)), $chains);
+check('an odd discount still gives tax in whole paise', array_filter($out, static fn (array $l): bool => $l['amount'] % 10000 !== 0) === array());
 $out = Plugin::lines(array(), $cart(array('discount_lines' => array(array('amount' => -m(9000))))), $config(), $chains);
 pin('a discount bigger than the cart leaves nothing to tax', array(), $byId($out));
 pin('no discount: no after_discount mark', false, isset(Plugin::lines(array(), $cart(), $config(), $chains)[0]['meta']['after_discount']));
