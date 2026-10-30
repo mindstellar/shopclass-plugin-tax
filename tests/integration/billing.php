@@ -50,6 +50,8 @@ use mindstellar\tax\RatesField;
 
 $locale = seed_locale($admin);
 seed_currency($admin, 'INR', 'Indian Rupee');
+$admin->query('UPDATE ' . DB_TABLE_PREFIX . "t_currency SET s_description = '₹' WHERE pk_c_code = 'INR'");
+$admin->query('UPDATE ' . DB_TABLE_PREFIX . "t_locale SET s_currency_format = '{CURRENCY}{NUMBER}', s_dec_point = '.', i_num_dec = 2 WHERE pk_c_code = '" . $locale . "'");
 seed_country($admin, 'IN', 'India');
 $clothing = seed_category($admin, 'Clothing', null, $locale);
 $tees     = seed_category($admin, 'Tees', $clothing, $locale);
@@ -172,8 +174,8 @@ Receipts::render(OrderStore::find($order->getId()), 'https://example.test/', 'Ba
 $html = (string) ob_get_clean();
 check('the receipt is a tax invoice', str_contains($html, 'Tax invoice #'), $html);
 check('with the seller\'s GSTIN and the place of supply', str_contains($html, 'GSTIN: 07AAACM1234A1Z5') && str_contains($html, 'Place of supply: Maharashtra, IN'));
-check('a summary per rate with the taxable value and the code', str_contains($html, 'Taxable value at GST 5%') && str_contains($html, '475.24 INR') && str_contains($html, 'Tax code at 5%') && str_contains($html, '6109'));
-pin('the tax amount shows once, on its line, not again in the summary', 1, substr_count($html, '23.76 INR (included)'));
+check('a summary per rate with the taxable value and the code', str_contains($html, 'Taxable value at GST 5%') && str_contains($html, '₹475.24') && str_contains($html, 'Tax code at 5%') && str_contains($html, '6109'));
+pin('the tax amount shows once, on its line, not again in the summary', 1, substr_count($html, '₹23.76 (included)'));
 check('and not core\'s "not a tax invoice" line', !str_contains($html, 'not a tax invoice') && str_contains($html, 'Thank you for your order.'));
 
 osc_set_preference('seller_tax_id', '07<b>X', Plugin::PAGE);

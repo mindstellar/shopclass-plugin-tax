@@ -213,7 +213,23 @@ final class Plugin
         $invoice    = osc_apply_filter('tax_invoice', Invoice::build($config, $taxes, $address, $discounted), $order, $context);
         $currency   = $order->getCurrency();
 
-        return Invoice::apply($details, is_array($invoice) ? $invoice : array(), static fn (int $m): string => \mindstellar\currency\Money::format($m, $currency));
+        return Invoice::apply($details, is_array($invoice) ? $invoice : array(), self::money($currency));
+    }
+
+    /**
+     * Formats micros as core's receipt does, e.g. "₹380.59"; older cores without that formatter give "380.59 INR".
+     *
+     * @return \Closure(int):string
+     */
+    private static function money(string $currency): \Closure
+    {
+        if (method_exists('mindstellar\\currency\\CurrencyService', 'money')) {
+            $service = \mindstellar\currency\CurrencyService::make();
+
+            return static fn (int $m): string => $service->money($m, $currency);
+        }
+
+        return static fn (int $m): string => \mindstellar\currency\Money::format($m, $currency);
     }
 
     /**
