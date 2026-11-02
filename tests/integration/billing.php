@@ -17,7 +17,9 @@
  */
 
 $core = rtrim(getenv('SHOPCLASS_CORE') ?: dirname(__DIR__, 3) . '/shopclass', '/');
-$pricer = $core . '/oc-includes/osclass/classes/billing/CartPricer.php';
+$pricer = is_file($core . '/oc-includes/classes/billing/CartPricer.php')
+    ? $core . '/oc-includes/classes/billing/CartPricer.php'
+    : $core . '/oc-includes/osclass/classes/billing/CartPricer.php';
 if (!is_file($pricer) || !str_contains((string) file_get_contents($pricer), 'PROBLEM_POINTERS')) {
     echo "SKIP  core at $core has no shop-mode cart contract\nRESULT: 0 passed, 0 failed\n";
     exit(getenv('REQUIRE_CORE') === '1' ? 1 : 0);
