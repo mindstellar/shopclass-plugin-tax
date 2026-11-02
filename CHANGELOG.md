@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+
+### Changed
+- Tax rounds to the currency decimals set in core, when core has them.
+
 ## 0.1.3
 
 ### Fixed

@@ -49,6 +49,8 @@ pin('yen are rounded to whole yen: 1234 at 10% is 123', m(123), $jpy->line(m(123
 pin('1235 at 10% is 124 (half up)', m(124), $jpy->line(m(1235), 1000)['tax']);
 $kwd = new Calculator(false, Currency::step('kwd'));
 pin('dinars keep three decimals: 1.235 at 5% is 0.062', 62000, $kwd->line(1235000, 500)['tax']);
+pin('JPY has none', 1000000, Currency::step('JPY'));
+pin('KWD has three', 1000, Currency::step('KWD'));
 pin('USD has two', 10000, Currency::step('USD'));
 
 harness_section('large amounts');
