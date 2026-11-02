@@ -86,6 +86,8 @@ pin('and their bases: 422.88 + 100', m(522.88), $lines[1]['meta']['base']);
 pin('marked included', array(true, true), array_column(array_column($lines, 'meta'), 'included'));
 pin('the meta lists each line with its code', array(array('kind' => 'item', 'line' => 0, 'item_id' => 7, 'code' => '6109', 'base' => m(422.88), 'tax' => m(76.12)), array('kind' => 'item', 'line' => 2, 'item_id' => 9, 'code' => null, 'base' => m(100), 'tax' => m(18))), $lines[1]['meta']['lines']);
 pin('and the rate and part', array(1800, 'gst', 10000), array($lines[1]['meta']['bp'], $lines[1]['meta']['part'], $lines[1]['meta']['share']));
+$withRef = $excl->lines(array(array('kind' => 'item', 'line' => 0, 'amount' => m(10), 'bp' => 1800), array('kind' => 'shipping', 'ref' => 'shipping.express', 'amount' => m(10), 'bp' => 1800)), $gst)[0]['meta']['lines'];
+pin('a shipping entry keeps its line id as ref; an item has none', array(false, 'shipping.express'), array(isset($withRef[0]['ref']), $withRef[1]['ref'] ?? null));
 pin('additive lines say so', false, $excl->lines(array(array('amount' => m(1), 'bp' => 1800)), $gst)[0]['meta']['included']);
 
 $halves = array(array('id' => 'a', 'label' => 'State tax', 'share' => 5000), array('id' => 'b', 'label' => 'City tax', 'share' => 5000));

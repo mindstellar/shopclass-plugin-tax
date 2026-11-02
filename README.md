@@ -23,8 +23,9 @@ Open Billing → Tax.
 
 1. Prices: turn on "Listing prices already include tax" (on by default), or leave it off to add tax on top. Set Tax name (such as VAT or sales tax). Turn on "Tax delivery charges too" to tax shipping.
 2. Seller: set Seller country code, Seller state or region, Seller tax number and Tax number label.
-3. Rates: set the Default rate, then optional rates by buyer country (code and percent) and by category (category, percent, optional tax code). Clear a row to remove it.
-4. Invoice: set Invoice title and Invoice footer.
+3. Buyer: set "Ask for buyer tax number" to Optional to show a field for it at checkout, and name it with "Buyer tax number label" (such as VAT number). Off by default.
+4. Rates: set the Default rate, then optional rates by buyer country (code and percent) and by category (category, percent, optional tax code). Clear a row to remove it.
+5. Invoice: set Invoice title and Invoice footer.
 
 With no rate table saved, the plugin adds nothing.
 
@@ -39,21 +40,23 @@ With no rate table saved, the plugin adds nothing.
 - There is one tax line per rate, such as `tax.vat.19` "VAT 19%" (the id comes from the tax name). Its meta holds `bp` (basis points), `part`, `base`, `included` and the cart `lines` it covers.
 - Tax is worked out on the prices after discounts: core runs `cart_discount_lines` first, an order discount is shared over the items by value, and a discount marked `applies_to: shipping` in its meta (free delivery) comes off the shipping only. On an older core that taxes first, a discounted order's invoice says so.
 - All amounts are computed on the server from core's cart. Nothing in the request sets a rate or amount.
+- Each item and taxed delivery line also gets its own tax: its taxable value, the part it pays to each tax line, and its tax code. Core keeps it only when the parts add up to the tax lines exactly. Invoices show it in a Tax column, and a credit note that returns units takes those lines' own tax. On an older 7.1 core the plugin works without it.
+- Buyer tax number: only its format is checked (4 to 20 letters and digits once spaces, dots and dashes are taken out). It is stored on the order and printed on the invoice.
 - Invoice: when an order carries this plugin's tax, its receipt becomes a tax invoice. It shows your title (default "Tax invoice"), tax number, place of supply (buyer's state and country), taxable value and tax codes per rate, and your footer.
 
 ## Notes / limits
 
-- Up to 20 tax lines per cart (distinct rates × parts).
+- Up to 20 tax lines per cart (distinct rates × parts). Past that the rest are left out, and so is each line's own tax.
 - Up to 250 country rates and 500 category rates.
 - Rates run from 0% to 100%, with up to two decimals.
-- No buyer tax number at checkout, no invoice numbering of its own (the invoice shows the order number) and no PDF. The receipt page prints.
+- No online check of a buyer tax number (no VIES or GST portal call) and no reverse charge. No invoice numbering of its own (the invoice shows the order number) and no PDF. The receipt page prints.
 - Settings are preferences in the `tax` section. No table of its own. A placed order keeps its tax lines.
 - Uninstalling removes the settings. Orders keep the tax lines they were charged.
 - Queries: none per quote without category rates. With category rates, one primary-key query per request.
 
 ## For developers
 
-Listens to the filters `cart_tax_lines` and `billing_receipt_details`. Fires three filters. A return value of the wrong shape is ignored.
+Listens to `cart_tax_lines`, `billing_receipt_details`, and on cores with checkout fields `checkout_fields`, `cart_checkout_before` and `billing_document_compose`. Fires four filters. A return value of the wrong shape is ignored.
 
 `$context`, passed to each:
 
@@ -66,7 +69,7 @@ array(
 )
 ```
 
-`tax_line_rate` `($rate, $line, $context)` changes the rate of one line. `$rate` is `array('bp' => 1800, 'code' => '6109'|null, 'source' => 'category'|'country'|'default')`. `$line` is `array('kind' => 'item'|'shipping', 'line', 'item_id', 'category_id', 'title', 'qty', 'amount')`. Return `array('bp' => int 0–10000, 'code' => ?string)`.
+`tax_line_rate` `($rate, $line, $context)` changes the rate of one line. `$rate` is `array('bp' => 1800, 'code' => '6109'|null, 'source' => 'category'|'country'|'default')`. `$line` is `array('kind' => 'item'|'shipping', 'line', 'ref' (shipping line id, shipping only), 'item_id', 'category_id', 'title', 'qty', 'amount')`. Return `array('bp' => int 0–10000, 'code' => ?string)`.
 
 ```php
 osc_add_filter('tax_line_rate', function ($rate, $line, $context) {
@@ -94,6 +97,19 @@ osc_add_filter('tax_invoice', function ($invoice, $order, $context) {
     $invoice['extra'][]    = array('label' => 'State code', 'value' => '07');
 
     return $invoice;
+});
+```
+
+`tax_buyer_id` `($check, $raw, $context)` checks the buyer's tax number. `$check` is `array('valid' => bool, 'value' => normalised string, 'message' => string, 'label' => 'Tax number', 'ask' => true)`. It also runs with `$raw` empty when checkout builds the field, so a listener can set `label`, or `ask` false to not show the field. Return the check with any key changed; a refusal with no message gets the default one.
+
+```php
+osc_add_filter('tax_buyer_id', function ($check, $raw, $context) {
+    if ($context['country'] !== 'GB' || $check['value'] === '') {
+        return $check;
+    }
+    $check['valid'] = (bool) preg_match('/^GB\d{9}$/', $check['value']);
+
+    return $check;
 });
 ```
 

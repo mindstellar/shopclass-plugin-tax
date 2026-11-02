@@ -120,7 +120,7 @@ harness_section('shipping');
 pin('not taxed unless the setting is on', 2, count(Plugin::lines(array(), $cart(), $config(), $chains)));
 $out = Plugin::lines(array(), $cart(), $config(array('shipping' => true)), $chains);
 pin('on: at the country rate, else the default (18% of 50 joins the 18% line)', array('tax.gst.5' => m(25), 'tax.gst.18' => m(27)), $byId($out));
-pin('as a shipping entry', array('kind' => 'shipping', 'line' => null, 'item_id' => null, 'code' => null, 'base' => m(50), 'tax' => m(9)), $out[1]['meta']['lines'][1]);
+pin('as a shipping entry, with the shipping line\'s id', array('kind' => 'shipping', 'line' => null, 'item_id' => null, 'code' => null, 'base' => m(50), 'tax' => m(9), 'ref' => 'shipping.standard'), $out[1]['meta']['lines'][1]);
 $free = $cart(array('shipping_lines' => array(array('id' => 'shipping.standard', 'label' => 'Standard', 'amount' => 0))));
 pin('free delivery is not taxed', array('tax.gst.5' => m(25), 'tax.gst.18' => m(18)), $byId(Plugin::lines(array(), $free, $config(array('shipping' => true)), $chains)));
 

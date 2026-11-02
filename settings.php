@@ -75,6 +75,23 @@ return array(
             ),
         ),
         array(
+            'title'  => __('Buyer', 'tax'),
+            'fields' => array(
+                array(
+                    'type'    => 'select',
+                    'name'    => 'ask_buyer_tax_id',
+                    'label'   => __('Ask for buyer tax number', 'tax'),
+                    'help'    => __('Optional: checkout shows a field for it and the invoice prints it. Only its format is checked.', 'tax'),
+                    'options' => array(
+                        'off'      => __('Off', 'tax'),
+                        'optional' => __('Optional', 'tax'),
+                    ),
+                    'default' => 'off',
+                ),
+                $text('buyer_tax_id_label', __('Buyer tax number label', 'tax'), 40, __('Tax number', 'tax'), __('What checkout calls it, such as VAT number.', 'tax')),
+            ),
+        ),
+        array(
             'title'  => __('Rates', 'tax'),
             'fields' => array(
                 array(
