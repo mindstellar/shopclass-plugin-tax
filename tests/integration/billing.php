@@ -150,6 +150,7 @@ osc_reset_preferences();
 
 harness_section('an inclusive quote');
 $q = null;
+\mindstellar\currency\CurrencyService::make()->enabled(); // every shop page has this list cached
 $n = harness_query_count(static function () use ($quote, &$q) {
     $q = $quote(array('address' => CartPricer::quoteAddress('IN', 'Maharashtra', '400001')));
 });
@@ -195,6 +196,12 @@ pin('added on top, delivery taxed too', array('tax.gst.5' => $m(24.95), 'tax.gst
 pin('the total includes it', array($m(56.87), 0, $m(499 + 118 + 50 + 56.87)), array($q->totals()['tax'], $q->totals()['tax_included'], $q->total()));
 $placed = (new GoodsCheckout())->place($buyer, $cart, array('country' => 'DE', 'state' => 'Berlin', 'postcode' => '10115') + $address, 'standard', 'fake')['order'];
 pin('the order charges it', $m(499 + 118 + 50 + 56.87), OrderStore::find($placed->getId())->getAmount());
+
+harness_section('currency decimals');
+pin('INR follows core: two decimals', 10000, \mindstellar\tax\Currency::step('INR'));
+\mindstellar\currency\CurrencyService::make()->update('INR', null, null, 0);
+pin('an admin set INR to none: core wins', 1000000, \mindstellar\tax\Currency::step('INR'));
+\mindstellar\currency\CurrencyService::make()->update('INR', null, null, 2);
 
 harness_section('uninstall');
 Plugin::uninstall();

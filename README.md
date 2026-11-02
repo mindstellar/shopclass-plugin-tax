@@ -21,7 +21,7 @@ Works on shared hosting. It needs no cron, worker, Redis or shell. On an older c
 
 Open Billing → Tax.
 
-1. Prices: turn on "Listing prices already include tax" (on by default), or leave it off to add tax on top. Set Tax name (such as VAT or GST). Turn on "Tax delivery charges too" to tax shipping.
+1. Prices: turn on "Listing prices already include tax" (on by default), or leave it off to add tax on top. Set Tax name (such as VAT or sales tax). Turn on "Tax delivery charges too" to tax shipping.
 2. Seller: set Seller country code, Seller state or region, Seller tax number and Tax number label.
 3. Rates: set the Default rate, then optional rates by buyer country (code and percent) and by category (category, percent, optional tax code). Clear a row to remove it.
 4. Invoice: set Invoice title and Invoice footer.
@@ -36,7 +36,7 @@ With no rate table saved, the plugin adds nothing.
 - Prices include tax: tax = price − price × 100 / (100 + rate). The total does not change and checkout shows "Includes …".
 - Tax on top: tax = price × rate / 100, added to the total.
 - Tax is worked out once per cart line, never per unit. It is rounded half up to the currency's smallest unit.
-- There is one tax line per rate, such as `tax.gst.18` "GST 18%". Its meta holds `bp` (basis points), `part`, `base`, `included` and the cart `lines` it covers.
+- There is one tax line per rate, such as `tax.gst.19` "VAT 19%". Its meta holds `bp` (basis points), `part`, `base`, `included` and the cart `lines` it covers.
 - Tax is worked out on the prices after discounts: core runs `cart_discount_lines` first, an order discount is shared over the items by value, and a discount marked `applies_to: shipping` in its meta (free delivery) comes off the shipping only. On an older core that taxes first, a discounted order's invoice says so.
 - All amounts are computed on the server from core's cart. Nothing in the request sets a rate or amount.
 - Invoice: when an order carries this plugin's tax, its receipt becomes a tax invoice. It shows your title (default "Tax invoice"), tax number, place of supply (buyer's state and country), taxable value and tax codes per rate, and your footer.
@@ -59,10 +59,10 @@ Listens to the filters `cart_tax_lines` and `billing_receipt_details`. Fires thr
 
 ```php
 array(
-    'seller_country' => 'IN',   'seller_state' => 'Delhi',
-    'country'        => 'IN',   'state'        => 'Maharashtra', 'postcode' => '400001',
+    'seller_country' => 'DE',   'seller_state' => 'Berlin',
+    'country'        => 'DE',   'state'        => 'Bavaria', 'postcode' => '80331',
     'same_country'   => true,   'same_state'   => false,  // compared without case or extra spaces
-    'inclusive'      => true,   'currency'     => 'INR',  'user_id' => 12,
+    'inclusive'      => true,   'currency'     => 'EUR',  'user_id' => 12,
 )
 ```
 
@@ -75,6 +75,8 @@ osc_add_filter('tax_line_rate', function ($rate, $line, $context) {
 ```
 
 `tax_parts` `($parts, $context)` splits a tax into parts. Default: `array(array('id' => 'gst', 'label' => 'GST', 'share' => 10000))`. Return 1 to 4 parts. Each has an `id` (a–z, 0–9, up to 16), a `label` and a whole `share` in basis points. Shares must sum to 10000. Each line's tax is split by largest remainder, so parts add up to the whole.
+
+The example below is the Tax GST plugin's India case.
 
 ```php
 osc_add_filter('tax_parts', function ($parts, $context) {
