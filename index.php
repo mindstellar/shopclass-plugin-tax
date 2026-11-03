@@ -2,8 +2,8 @@
 /*
 Plugin Name: Tax
 Plugin URI: https://github.com/mindstellar/shopclass-plugin-tax
-Description: Tax on every cart and order, for any country: a default rate, rates by buyer country and by category, prices with or without tax, and the receipt as a tax invoice. Other plugins can change the rate of a line, split a tax into parts and add to the invoice.
-Version: 0.1.4
+Description: Tax on every cart and order, for any country: a default rate, rates by buyer country and by category, prices with or without tax, each line's own tax, an optional buyer tax number, and the receipt as a tax invoice. Other plugins can change the rate of a line, split a tax into parts and add to the invoice.
+Version: 0.2.0
 Author: Navjot Tomer (Mindstellar)
 Author URI: https://mindstellar.com
 Short Name: tax
@@ -67,3 +67,13 @@ osc_add_hook(osc_plugin_path(__FILE__) . '_configure', static function () {
 
 osc_add_filter('cart_tax_lines', array(Listener::class, 'onTaxLines'), 10);
 osc_add_filter('billing_receipt_details', array(Listener::class, 'onReceipt'), 10);
+
+// Checkout fields and line tax came later in 7.1; on older cores the plugin works without them.
+if (class_exists('mindstellar\\billing\\event\\CheckoutFields')
+    && method_exists('mindstellar\\billing\\event\\CheckoutStarting', 'field')
+    && class_exists('mindstellar\\billing\\event\\DocumentComposing')
+) {
+    osc_add_filter('checkout_fields', array(Listener::class, 'onFields'), 10);
+    osc_add_hook('cart_checkout_before', array(Listener::class, 'onStarting'), 10);
+    osc_add_filter('billing_document_compose', array(Listener::class, 'onDocument'), 10);
+}

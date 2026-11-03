@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0
+
+### New
+- Each item and delivery line carries its own tax, which invoices and credit notes show and refunds use.
+- Optional buyer tax number at checkout, format-checked and printed on the invoice.
+- Filter `tax_buyer_id` for plugins that check a country's tax number.
+- Invoices use the `tax_invoice` code label, such as HSN.
+
+### Fixed
+- A cart with more than 20 tax lines no longer stops the quote.
+
 ## 0.1.4
 
 ### Changed

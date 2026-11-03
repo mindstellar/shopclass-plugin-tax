@@ -38,6 +38,11 @@ final class Config
 
     public ?Rates $rates;
 
+    /** Ask the buyer for a tax number at checkout (optional), else not at all. */
+    public bool $askBuyerId;
+
+    public string $buyerIdLabel;
+
     public function __construct(
         bool $inclusive,
         ?Rates $rates,
@@ -48,7 +53,9 @@ final class Config
         string $sellerTaxId = '',
         string $taxIdLabel = 'Tax number',
         string $invoiceTitle = 'Tax invoice',
-        string $invoiceFooter = ''
+        string $invoiceFooter = '',
+        bool $askBuyerId = false,
+        string $buyerIdLabel = ''
     ) {
         $this->inclusive     = $inclusive;
         $this->rates         = $rates;
@@ -60,6 +67,8 @@ final class Config
         $this->taxIdLabel    = $taxIdLabel;
         $this->invoiceTitle  = $invoiceTitle;
         $this->invoiceFooter = $invoiceFooter;
+        $this->askBuyerId    = $askBuyerId;
+        $this->buyerIdLabel  = $buyerIdLabel;
     }
 
     public static function fromSettings(): self
@@ -77,7 +86,9 @@ final class Config
             $text('seller_tax_id'),
             $text('tax_id_label'),
             $text('invoice_title'),
-            $text('invoice_footer')
+            $text('invoice_footer'),
+            $text('ask_buyer_tax_id') === 'optional',
+            $text('buyer_tax_id_label')
         );
     }
 }

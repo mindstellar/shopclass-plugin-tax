@@ -131,7 +131,7 @@ final class Calculator
                     'code'    => isset($entry['code']) && $entry['code'] !== '' ? (string) $entry['code'] : null,
                     'base'    => $one['base'],
                     'tax'     => $split[$i],
-                );
+                ) + (isset($entry['ref']) && $entry['ref'] !== '' ? array('ref' => (string) $entry['ref']) : array());
             }
         }
         uksort($groups, static function (string $a, string $b): int {
@@ -158,6 +158,41 @@ final class Calculator
                     'lines'    => $group['lines'],
                 ),
             );
+        }
+
+        return $out;
+    }
+
+    /**
+     * The tax of each item line (by cart position) and shipping line (by id), read back from the
+     * tax lines lines() made. Each part names its tax line, so the parts naming a tax line sum to it.
+     *
+     * @param array<int,array<string,mixed>> $taxLines from lines()
+     *
+     * @return array{item:array<int,array{included:bool,base:int,code:?string,parts:list<array{tax:string,label:string,bp:int,amount:int}>}>,shipping:array<string,array{included:bool,base:int,code:?string,parts:list<array{tax:string,label:string,bp:int,amount:int}>}>}
+     */
+    public static function perLine(array $taxLines): array
+    {
+        $out = array('item' => array(), 'shipping' => array());
+        foreach ($taxLines as $line) {
+            $meta = is_array($line['meta'] ?? null) ? $line['meta'] : array();
+            if (!isset($meta['bp'], $meta['share']) || !is_array($meta['lines'] ?? null)) {
+                continue;
+            }
+            $part = array(
+                'tax'   => (string) $line['id'],
+                'label' => (string) $line['label'],
+                'bp'    => intdiv((int) $meta['bp'] * (int) $meta['share'] + 5000, 10000),
+            );
+            foreach ($meta['lines'] as $entry) {
+                $kind = $entry['kind'] ?? null;
+                $ref  = $kind === 'shipping' ? ($entry['ref'] ?? null) : ($entry['line'] ?? null);
+                if (($kind !== 'item' && $kind !== 'shipping') || $ref === null) {
+                    continue;
+                }
+                $out[$kind][$ref] ??= array('included' => ($meta['included'] ?? false) === true, 'base' => (int) $entry['base'], 'code' => $entry['code'] ?? null, 'parts' => array());
+                $out[$kind][$ref]['parts'][] = $part + array('amount' => (int) $entry['tax']);
+            }
         }
 
         return $out;

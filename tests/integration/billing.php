@@ -115,6 +115,22 @@ require dirname(__DIR__, 2) . '/index.php';
 check('the settings page is registered', SettingsPageRegistry::getInstance()->fields(Plugin::PAGE) !== array());
 pin('prices include tax until the admin says otherwise', true, (bool) osc_settings_value(Plugin::PAGE, 'prices_include_tax'));
 
+$warnings = array();
+set_error_handler(static function (int $no, string $msg) use (&$warnings): bool {
+    $warnings[] = $msg;
+
+    return true;
+}, E_USER_WARNING);
+$lineTaxSums = static function ($q): bool {
+    $sums = array();
+    foreach (array_merge(array_map(static fn ($l) => $q->lineTax('item', $l['line']), $q->lines()), array_map(static fn ($l) => $q->lineTax('shipping', $l['id']), $q->extraLines('shipping'))) as $tax) {
+        foreach ($tax?->parts ?? array() as $part) {
+            $sums[$part['tax']] = ($sums[$part['tax']] ?? 0) + $part['amount'];
+        }
+    }
+
+    return $sums !== array() && $sums === array_column($q->extraLines('tax'), 'amount', 'id');
+};
 $pricer = new CartPricer();
 $quote  = static fn (array $ctx = array()) => $pricer->quote($cart, $ctx);
 pin('no rate table yet: no tax', array(), $quote()->extraLines('tax'));
@@ -162,6 +178,13 @@ pin('one tax line per rate, the subcategory taking its parent\'s', array('tax.gs
 pin('marked included', array(true, true), array_column($q->extraLines('tax'), 'included'));
 pin('tax_included holds them; tax and the total do not', array($m(41.76), 0, $m(499 + 118 + 50)), array($q->totals()['tax_included'], $q->totals()['tax'], $q->total()));
 
+$hasLineTax = method_exists($q, 'lineTax');
+if ($hasLineTax) {
+    check('core accepts each line\'s own tax: the parts sum to the tax lines', $lineTaxSums($q));
+    pin('the tee pays 5% with its code', array(true, $m(475.24), '6109', array('tax.gst.5')), array($q->lineTax('item', 0)?->included, $q->lineTax('item', 0)?->base, $q->lineTax('item', 0)?->code, array_column($q->lineTax('item', 0)?->parts ?? array(), 'tax')));
+    pin('and no warning', array(), $warnings);
+}
+
 harness_section('the order and its invoice');
 $address = array('name' => 'Asha', 'phone' => '9800000000', 'line1' => '1 Marine Drive', 'line2' => '', 'city' => 'Mumbai', 'state' => 'Maharashtra', 'postcode' => '400001', 'country' => 'IN');
 $order   = (new GoodsCheckout())->place($buyer, $cart, $address, 'standard', 'fake')['order'];
@@ -188,6 +211,14 @@ Receipts::render(OrderStore::find($order->getId()), 'https://example.test/', 'Ba
 $html = (string) ob_get_clean();
 check('what the admin typed is printed escaped', str_contains($html, '07&lt;b&gt;X') && !str_contains($html, '07<b>X'));
 
+if ($hasLineTax) {
+    $items = OrderLineStore::itemLines($order->getId());
+    pin('each item line keeps its own tax', array($m(23.76), $m(18)), array_map(static fn ($l) => OrderLineStore::lineTax($l)?->amount, $items));
+    $invoice = \mindstellar\billing\DocumentStore::invoiceOf($order->getId());
+    pin('the invoice calls the code "Tax code"', 'Tax code', $invoice?->data['wording']['code_label'] ?? null);
+    pin('and freezes each line\'s tax', array('5%', '18%'), array_map(static fn ($l) => $l['tax']['rate_text'] ?? null, array_values(array_filter($invoice?->data['lines'] ?? array(), static fn ($l) => ($l['kind'] ?? '') === 'item'))));
+}
+
 harness_section('exclusive tax');
 osc_set_preference('prices_include_tax', '0', Plugin::PAGE, 'BOOLEAN');
 osc_set_preference('tax_shipping', '1', Plugin::PAGE, 'BOOLEAN');
@@ -198,6 +229,48 @@ pin('added on top, delivery taxed too', array('tax.gst.5' => $m(24.95), 'tax.gst
 pin('the total includes it', array($m(56.87), 0, $m(499 + 118 + 50 + 56.87)), array($q->totals()['tax'], $q->totals()['tax_included'], $q->total()));
 $placed = (new GoodsCheckout())->place($buyer, $cart, array('country' => 'DE', 'state' => 'Berlin', 'postcode' => '10115') + $address, 'standard', 'fake')['order'];
 pin('the order charges it', $m(499 + 118 + 50 + 56.87), OrderStore::find($placed->getId())->getAmount());
+
+if ($hasLineTax) {
+    check('taxed shipping, on top: the parts still sum', $lineTaxSums($q));
+    pin('the delivery line pays 19%', array(false, $m(50), $m(9.5)), array($q->lineTax('shipping', 'shipping.standard')?->included, $q->lineTax('shipping', 'shipping.standard')?->base, $q->lineTax('shipping', 'shipping.standard')?->amount));
+
+    harness_section('two parts and a discount');
+    $split = static fn ($parts, $ctx) => $ctx['same_country'] ? array(array('id' => 'cgst', 'label' => 'CGST', 'share' => 5000), array('id' => 'sgst', 'label' => 'SGST', 'share' => 5000)) : $parts;
+    $off   = static fn ($lines) => array_merge((array) $lines, array(array('id' => 'discount.test', 'label' => 'Test', 'amount' => -$m(33.33), 'currency' => 'INR')));
+    osc_add_filter('tax_parts', $split, 10);
+    osc_add_filter('cart_discount_lines', $off, 10);
+    $q = $quote(array('address' => CartPricer::quoteAddress('IN', 'Delhi', '110001')));
+    pin('four tax lines', 4, count($q->extraLines('tax')));
+    check('core accepts the two-part split after a discount', $lineTaxSums($q));
+    pin('the book pays 9% + 9%', array(900, 900), array_column($q->lineTax('item', 1)?->parts ?? array(), 'bp'));
+    pin('still no warning', array(), $warnings);
+    osc_remove_filter('tax_parts', $split);
+    osc_remove_filter('cart_discount_lines', $off);
+
+    harness_section('the buyer\'s tax number');
+    pin('not asked by default', array(), $quote()->checkoutFields());
+    osc_set_preference('ask_buyer_tax_id', 'optional', Plugin::PAGE);
+    osc_set_preference('buyer_tax_id_label', 'VAT number', Plugin::PAGE);
+    osc_reset_preferences();
+    pin('asked when the setting says optional', array(array('tax_id', 'VAT number', false)), array_map(static fn ($f) => array($f['id'], $f['label'], $f['required']), $quote()->checkoutFields()));
+    $de = array('country' => 'DE', 'state' => 'Berlin', 'postcode' => '10115') + $address;
+    $placed = (new GoodsCheckout())->place($buyer, $cart, $de, 'standard', 'fake', '', null, array('tax_id' => 'de 123.456-789'))['order'];
+    pin('stored on the order, normalised', array('label' => 'VAT number', 'value' => 'DE123456789', 'invoice' => true), OrderStore::find($placed->getId())->getMeta()['_fields']['tax_id'] ?? null);
+    $refused = null;
+    try {
+        (new GoodsCheckout())->place($buyer, $cart, $de, 'standard', 'fake', '', null, array('tax_id' => 'D!'));
+    } catch (\Throwable $e) {
+        $refused = method_exists($e, 'errors') ? array_column($e->errors(), 'pointer') : array($e->getMessage());
+    }
+    pin('a bad one is refused at its field', array('/fields/tax_id'), $refused);
+    $hsn = static fn ($invoice) => array('code_label' => 'HSN') + $invoice;
+    osc_add_filter('tax_invoice', $hsn, 10);
+    Billing::markPaid(OrderStore::find($placed->getId()), 'ext-tax-2');
+    $invoice = \mindstellar\billing\DocumentStore::invoiceOf($placed->getId());
+    pin('a tax_invoice listener renames the code label on the invoice', 'HSN', $invoice?->data['wording']['code_label'] ?? null);
+    pin('and the buyer\'s number is printed', array(array('label' => 'VAT number', 'value' => 'DE123456789')), $invoice?->data['buyer']['fields'] ?? null);
+    osc_remove_filter('tax_invoice', $hsn);
+}
 
 harness_section('currency decimals');
 pin('INR follows core: two decimals', 10000, \mindstellar\tax\Currency::step('INR'));

@@ -100,7 +100,7 @@ final class Plugin
             if ($amount <= 0 || !$config->taxShipping) {
                 continue;
             }
-            $entry      = array('kind' => 'shipping', 'line' => null, 'item_id' => null, 'category_id' => 0, 'title' => (string) ($ship['label'] ?? ''), 'qty' => 1, 'amount' => $amount);
+            $entry      = array('kind' => 'shipping', 'line' => null, 'ref' => (string) ($ship['id'] ?? ''), 'item_id' => null, 'category_id' => 0, 'title' => (string) ($ship['label'] ?? ''), 'qty' => 1, 'amount' => $amount);
             $shipping[] = $entry + self::rate($config->rates->forLine(array(), $context['country']), $entry, $context);
         }
         // An order discount lowers the items; one marked for shipping (free delivery) only the shipping.
@@ -197,13 +197,40 @@ final class Plugin
      */
     public static function receiptDetails($details, $order = null)
     {
-        if (!is_array($details) || !$order instanceof Order || !$order->isGoods()) {
+        if (!is_array($details) || !$order instanceof Order) {
             return $details;
+        }
+        $invoice = self::invoice($order);
+
+        return $invoice === null ? $details : Invoice::apply($details, $invoice, self::money($order->getCurrency()));
+    }
+
+    /**
+     * What an invoice calls a line's tax code ("Tax code", or "HSN" from a `tax_invoice` listener);
+     * null when the order carries none of this plugin's tax.
+     */
+    public static function codeLabel(Order $order): ?string
+    {
+        $invoice = self::invoice($order);
+        $label   = is_string($invoice['code_label'] ?? null) ? trim($invoice['code_label']) : '';
+
+        return $invoice === null ? null : ($label !== '' ? mb_substr($label, 0, 40, 'UTF-8') : __('Tax code', 'tax'));
+    }
+
+    /**
+     * The tax invoice of a goods order taxed by this plugin, after the `tax_invoice` filter.
+     *
+     * @return array<string,mixed>|null
+     */
+    private static function invoice(Order $order): ?array
+    {
+        if (!$order->isGoods()) {
+            return null;
         }
         $lines = OrderLineStore::ofOrder($order->getId());
         $taxes = array_values(array_filter($lines, static fn (array $l): bool => $l['kind'] === OrderLineStore::KIND_TAX && isset($l['meta']['part'], $l['meta']['bp'])));
         if ($taxes === array()) {
-            return $details;
+            return null;
         }
         $config     = Config::fromSettings();
         $fulfilment = $order->fulfilment() ?? array();
@@ -211,9 +238,8 @@ final class Plugin
         $discounted = array_filter($lines, static fn (array $l): bool => $l['kind'] === OrderLineStore::KIND_DISCOUNT) !== array();
         $context    = Context::build($config, $address, $order->getCurrency(), $order->getUserId());
         $invoice    = osc_apply_filter('tax_invoice', Invoice::build($config, $taxes, $address, $discounted), $order, $context);
-        $currency   = $order->getCurrency();
 
-        return Invoice::apply($details, is_array($invoice) ? $invoice : array(), self::money($currency));
+        return is_array($invoice) ? $invoice : array();
     }
 
     /**

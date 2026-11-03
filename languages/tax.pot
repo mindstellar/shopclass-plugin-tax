@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Tax 0.1.1\n"
+"Project-Id-Version: Tax 0.2.0\n"
 "Report-Msgid-Bugs-To: https://github.com/mindstellar/shopclass-plugin-tax/issues\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -16,7 +16,7 @@ msgstr ""
 msgid "\"%s\" is not a two-letter country code."
 msgstr ""
 
-#: src/Invoice.php:115
+#: src/Invoice.php:117
 msgid "%1$s at %2$s%%"
 msgstr ""
 
@@ -36,8 +36,20 @@ msgstr ""
 msgid "Adds tax to every cart and order from the rates below, and prints the receipt as a tax invoice. Tax is worked out on the server, per line, and rounded to the currency's smallest unit."
 msgstr ""
 
+#: settings.php:83
+msgid "Ask for buyer tax number"
+msgstr ""
+
 #: settings.php:53
 msgid "At the buyer country's rate, else the default rate. Free delivery is never taxed."
+msgstr ""
+
+#: settings.php:78
+msgid "Buyer"
+msgstr ""
+
+#: settings.php:91
+msgid "Buyer tax number label"
 msgstr ""
 
 #: src/RatesField.php:118
@@ -60,7 +72,7 @@ msgstr ""
 msgid "Country code"
 msgstr ""
 
-#: settings.php:90
+#: settings.php:107
 #: src/RatesField.php:93
 msgid "Default rate"
 msgstr ""
@@ -69,15 +81,23 @@ msgstr ""
 msgid "Each category rate must be a percent from 0 to 100."
 msgstr ""
 
-#: settings.php:96
+#: src/BuyerId.php:47
+msgid "Enter a tax number of 4 to 20 letters and digits."
+msgstr ""
+
+#: src/Listener.php:63
+msgid "For a business purchase. Printed on the invoice."
+msgstr ""
+
+#: settings.php:113
 msgid "Invoice"
 msgstr ""
 
-#: settings.php:102
+#: settings.php:119
 msgid "Invoice footer"
 msgstr ""
 
-#: settings.php:98
+#: settings.php:115
 msgid "Invoice title"
 msgstr ""
 
@@ -85,15 +105,27 @@ msgstr ""
 msgid "Listing prices already include tax"
 msgstr ""
 
-#: src/Invoice.php:120
+#: src/Invoice.php:122
 msgid "Note"
+msgstr ""
+
+#: settings.php:86
+msgid "Off"
 msgstr ""
 
 #: settings.php:45
 msgid "On: the tax is shown as included and the total does not change. Off: the tax is added on top."
 msgstr ""
 
-#: src/Invoice.php:63
+#: settings.php:87
+msgid "Optional"
+msgstr ""
+
+#: settings.php:84
+msgid "Optional: checkout shows a field for it and the invoice prints it. Only its format is checked."
+msgstr ""
+
+#: src/Invoice.php:65
 msgid "Place of supply"
 msgstr ""
 
@@ -101,7 +133,7 @@ msgstr ""
 msgid "Prices"
 msgstr ""
 
-#: settings.php:103
+#: settings.php:120
 msgid "Printed at the foot of every invoice. Plain text."
 msgstr ""
 
@@ -118,7 +150,7 @@ msgstr ""
 msgid "Rate %"
 msgstr ""
 
-#: settings.php:78
+#: settings.php:95
 msgid "Rates"
 msgstr ""
 
@@ -155,7 +187,8 @@ msgstr ""
 msgid "Tax"
 msgstr ""
 
-#: src/Invoice.php:65
+#: src/Invoice.php:67
+#: src/Plugin.php:217
 #: src/RatesField.php:119
 #: src/RatesField.php:135
 #: src/RatesField.php:136
@@ -166,12 +199,12 @@ msgstr ""
 msgid "Tax delivery charges too"
 msgstr ""
 
-#: settings.php:98
-#: src/Invoice.php:60
+#: settings.php:115
+#: src/Invoice.php:62
 msgid "Tax invoice"
 msgstr ""
 
-#: src/Invoice.php:120
+#: src/Invoice.php:122
 msgid "Tax is worked out on the prices before any discount."
 msgstr ""
 
@@ -184,7 +217,9 @@ msgid "Tax needs Shopclass 7.1 or later with shop mode and is switched off. Upda
 msgstr ""
 
 #: settings.php:74
-#: src/Invoice.php:61
+#: settings.php:91
+#: src/Invoice.php:63
+#: src/Listener.php:160
 msgid "Tax number"
 msgstr ""
 
@@ -192,12 +227,12 @@ msgstr ""
 msgid "Tax number label"
 msgstr ""
 
-#: src/Invoice.php:103
+#: src/Invoice.php:105
 msgid "Taxable value at %s"
 msgstr ""
 
-#: settings.php:104
-#: src/Invoice.php:70
+#: settings.php:121
+#: src/Invoice.php:72
 msgid "Thank you for your order."
 msgstr ""
 
@@ -225,7 +260,7 @@ msgstr ""
 msgid "Use %d characters or fewer."
 msgstr ""
 
-#: settings.php:107
+#: settings.php:124
 msgid "Use 1000 characters or fewer."
 msgstr ""
 
@@ -235,6 +270,10 @@ msgstr ""
 
 #: src/RatesField.php:95
 msgid "Used when no country or category rate below applies. 0 charges no tax."
+msgstr ""
+
+#: settings.php:91
+msgid "What checkout calls it, such as VAT number."
 msgstr ""
 
 #: settings.php:74
