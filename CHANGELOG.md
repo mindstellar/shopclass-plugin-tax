@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+### Changed
+- Uses `CurrencyService::money()` only; the fallback for older cores is gone.
+
 ## 0.2.0
 
 ### New

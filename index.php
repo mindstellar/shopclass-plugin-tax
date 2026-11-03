@@ -3,7 +3,7 @@
 Plugin Name: Tax
 Plugin URI: https://github.com/mindstellar/shopclass-plugin-tax
 Description: Tax on every cart and order, for any country: a default rate, rates by buyer country and by category, prices with or without tax, each line's own tax, an optional buyer tax number, and the receipt as a tax invoice. Other plugins can change the rate of a line, split a tax into parts and add to the invoice.
-Version: 0.2.0
+Version: 0.2.1
 Author: Navjot Tomer (Mindstellar)
 Author URI: https://mindstellar.com
 Short Name: tax
