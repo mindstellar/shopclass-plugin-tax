@@ -27,7 +27,7 @@ final class RatesField
 
     private static ?string $error = null;
 
-    /** @var ?array{default:string,country:array<int,array<string,string>>,category:array<int,array<string,string>>} the rows posted with a refused save */
+    /** @var ?array{default:string,country:array<int,array<string,string>>,category:array<int,array<string,string>>} the rows posted with a refused save (category rows carry id, country, rate, code) */
     private static ?array $posted = null;
 
     /** @var ?array{table:string,row:int,column:string} */
@@ -42,7 +42,7 @@ final class RatesField
     public static function collect(array $field = array()): string
     {
         $country  = self::rows(array('code', 'rate'), 'tax_country_');
-        $category = self::rows(array('id', 'rate', 'code'), 'tax_category_');
+        $category = self::rows(array('id', 'country', 'rate', 'code'), 'tax_category_');
         $default  = Params::getParamString('tax_default');
         [$rates, self::$error, self::$cell] = Rates::fromForm($default, $country, $category);
 
@@ -115,7 +115,8 @@ final class RatesField
         $options = array('' => __('Choose a category', 'tax')) + self::categoryOptions();
         osc_admin_section_heading(__('Rates by category', 'tax'), 'subsection');
         echo '<p class="help-box">' . osc_esc_html(__('A category rate wins over the country and default rates, and covers its subcategories unless one has its own. The tax code, if any, is listed on the invoice.', 'tax')) . '</p>';
-        echo '<div class="osc-prose table-contains-actions osc-table-stack"><table class="table"><thead><tr><th>' . osc_esc_html(__('Category', 'tax')) . '</th><th>' . osc_esc_html(__('Rate %', 'tax')) . '</th><th>'
+        echo '<p class="help-box">' . osc_esc_html(__('Leave Country blank for every buyer, or give a two-letter code to use the rate only for buyers there. A rate for the buyer\'s country wins over a blank one.', 'tax')) . '</p>';
+        echo '<div class="osc-prose table-contains-actions osc-table-stack"><table class="table"><thead><tr><th>' . osc_esc_html(__('Category', 'tax')) . '</th><th>' . osc_esc_html(__('Country', 'tax')) . '</th><th>' . osc_esc_html(__('Rate %', 'tax')) . '</th><th>'
             . osc_esc_html(__('Tax code', 'tax')) . '</th></tr></thead><tbody>';
         $n = 0;
         foreach (self::categoryRows($rates, $posted) as $row) {
@@ -130,6 +131,8 @@ final class RatesField
                 'error'   => $errorAt('category', $n, 'id'),
                 'attrs'   => array('aria-label' => __('Category', 'tax')),
             ));
+            echo '</td><td data-col-name="' . osc_esc_html(__('Country', 'tax')) . '">';
+            $input('tax_category_country[]', 'tax-category-country-' . $n, $row['country'], __('Country', 'tax'), $errorAt('category', $n, 'country'));
             echo '</td><td data-col-name="' . osc_esc_html(__('Rate %', 'tax')) . '">';
             $input('tax_category_rate[]', 'tax-category-rate-' . $n, $row['rate'], __('Rate %', 'tax'), $errorAt('category', $n, 'rate'));
             echo '</td><td data-col-name="' . osc_esc_html(__('Tax code', 'tax')) . '">';
@@ -166,22 +169,28 @@ final class RatesField
     /**
      * @param ?array<string,mixed> $posted
      *
-     * @return array<int,array{id:string,rate:string,code:string}>
+     * @return array<int,array{id:string,country:string,rate:string,code:string}>
      */
     private static function categoryRows(Rates $rates, ?array $posted): array
     {
         $out = array();
         if ($posted !== null) {
             foreach (self::withoutTrailingBlanks($posted['category']) as $row) {
-                $out[] = array('id' => $row['id'], 'rate' => $row['rate'], 'code' => $row['code']);
+                $out[] = array('id' => $row['id'], 'country' => $row['country'], 'rate' => $row['rate'], 'code' => $row['code']);
             }
         } else {
+            $row = static fn (int $id, string $country, array $rate): array => array('id' => (string) $id, 'country' => $country, 'rate' => Percent::fromBp($rate['bp']), 'code' => (string) $rate['code']);
             foreach ($rates->byCategory as $id => $rate) {
-                $out[] = array('id' => (string) $id, 'rate' => Percent::fromBp($rate['bp']), 'code' => (string) $rate['code']);
+                $out[] = $row($id, '', $rate);
+            }
+            foreach ($rates->byCategoryCountry as $country => $categoryRates) {
+                foreach ($categoryRates as $id => $rate) {
+                    $out[] = $row($id, (string) $country, $rate);
+                }
             }
         }
 
-        return array_merge($out, array_fill(0, self::BLANK_ROWS, array('id' => '', 'rate' => '', 'code' => '')));
+        return array_merge($out, array_fill(0, self::BLANK_ROWS, array('id' => '', 'country' => '', 'rate' => '', 'code' => '')));
     }
 
     /**

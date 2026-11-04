@@ -279,3 +279,11 @@ msgstr ""
 #: settings.php:74
 msgid "What the invoice calls it, such as VAT number."
 msgstr ""
+
+#: src/RatesField.php:119
+msgid "Country"
+msgstr ""
+
+#: src/RatesField.php:118
+msgid "Leave Country blank for every buyer, or give a two-letter code to use the rate only for buyers there. A rate for the buyer's country wins over a blank one."
+msgstr ""

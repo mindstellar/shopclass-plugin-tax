@@ -24,14 +24,14 @@ Open Billing → Tax.
 1. Prices: turn on "Listing prices already include tax" (on by default), or leave it off to add tax on top. Set Tax name (such as VAT or sales tax). Turn on "Tax delivery charges too" to tax shipping.
 2. Seller: set Seller country code, Seller state or region, Seller tax number and Tax number label.
 3. Buyer: set "Ask for buyer tax number" to Optional to show a field for it at checkout, and name it with "Buyer tax number label" (such as VAT number). Off by default.
-4. Rates: set the Default rate, then optional rates by buyer country (code and percent) and by category (category, percent, optional tax code). Clear a row to remove it.
+4. Rates: set the Default rate, then optional rates by buyer country (code and percent) and by category (category, optional buyer country, percent, optional tax code). Clear a row to remove it.
 5. Invoice: set Invoice title and Invoice footer.
 
 With no rate table saved, the plugin adds nothing.
 
 ## How it works
 
-- Rate order: the line's category rate (a subcategory uses its nearest parent's), then the buyer country's rate, then the default.
+- Rate order: the line's category rate (a subcategory uses its nearest parent's), then the buyer country's rate, then the default. A category rate with a country is for buyers there only, and wins over the same category's rate for every country. An Indian shop that exports tax-free sets the default to 0, `IN` to 18, and its category rates for `IN`.
 - A buyer with no address yet counts as in the seller's country and state.
 - Delivery, when taxed, uses the buyer country's rate, else the default. Free delivery is never taxed.
 - Prices include tax: tax = price − price × 100 / (100 + rate). The total does not change and checkout shows "Includes …".

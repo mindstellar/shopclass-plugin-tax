@@ -69,10 +69,32 @@ pin('no country rate either: the default', array('bp' => 1800, 'code' => null, '
 pin('no country at all: the default', array('bp' => 1800, 'code' => null, 'source' => 'default'), $rates->forLine(array(), ''));
 check('it knows when a category rate exists', $rates->hasCategoryRates() && !(new Rates(1800, array('DE' => 1900)))->hasCategoryRates());
 
+harness_section('a category rate for one buyer country');
+$perCountry = Rates::fromJson('{"default_bp":0,"by_country":{"IN":1800},"by_category":{"12":{"bp":500}},"by_category_country":{"IN":{"12":{"bp":1200,"code":"6109"},"4":{"bp":2800}}}}');
+pin('reads and writes back the same', '{"default_bp":0,"by_country":{"IN":1800},"by_category":{"12":{"bp":500}},"by_category_country":{"IN":{"12":{"bp":1200,"code":"6109"},"4":{"bp":2800}}}}', $perCountry?->toJson());
+pin('a buyer in that country takes it', array('bp' => 1200, 'code' => '6109', 'source' => 'category'), $perCountry->forLine($chainTee, 'IN'));
+pin('a buyer elsewhere takes the rate for every country', array('bp' => 500, 'code' => null, 'source' => 'category'), $perCountry->forLine($chainTee, 'DE'));
+pin('the nearest category still wins: a parent\'s country rate does not beat the own category\'s', 1200, $perCountry->forLine(array(12, 4), 'IN')['bp']);
+pin('a subcategory takes its parent\'s country rate', array('bp' => 2800, 'code' => null, 'source' => 'category'), $perCountry->forLine(array(99, 4), 'IN'));
+pin('elsewhere, with no category rate for every country: the default', array('bp' => 0, 'code' => null, 'source' => 'default'), $perCountry->forLine(array(99, 4), 'US'));
+check('it counts as having category rates', (new Rates(0, array(), array(), array('IN' => array(4 => array('bp' => 1, 'code' => null)))))->hasCategoryRates());
+foreach (array(
+    'a lower-case country' => '{"default_bp":0,"by_category_country":{"in":{"4":{"bp":5}}}}',
+    'an empty country'     => '{"default_bp":0,"by_category_country":{"IN":{}}}',
+    'a bad rate in it'     => '{"default_bp":0,"by_category_country":{"IN":{"4":{"bp":"5"}}}}',
+    'a list'               => '{"default_bp":0,"by_category_country":["IN"]}',
+) as $name => $bad) {
+    pin('malformed, so no table: ' . $name, null, Rates::fromJson($bad));
+}
+
 harness_section('from the admin form');
 [$form, $error] = Rates::fromForm('18', array(array('code' => ' de ', 'rate' => '19'), array('code' => '', 'rate' => '')), array(array('id' => '12', 'rate' => '5', 'code' => '6109'), array('id' => '', 'rate' => '', 'code' => '')));
 pin('blank rows are skipped, codes upper-cased', array(null, '{"default_bp":1800,"by_country":{"DE":1900},"by_category":{"12":{"bp":500,"code":"6109"}}}'), array($error, $form->toJson()));
 pin('an empty default is 0%', 0, Rates::fromForm('', array(), array())[0]->defaultBp);
+[$form, $error] = Rates::fromForm('0', array(), array(array('id' => '12', 'country' => '', 'rate' => '5', 'code' => ''), array('id' => '12', 'country' => ' in ', 'rate' => '12', 'code' => '6109')));
+pin('one category, for every country and for one country', array(null, '{"default_bp":0,"by_country":{},"by_category":{"12":{"bp":500}},"by_category_country":{"IN":{"12":{"bp":1200,"code":"6109"}}}}'), array($error, $form?->toJson()));
+pin('a bad country on a category row names its cell', array('table' => 'category', 'row' => 0, 'column' => 'country'), Rates::fromForm('0', array(), array(array('id' => '3', 'country' => 'India', 'rate' => '5', 'code' => '')))[2]);
+pin('the same category and country twice is refused', array('table' => 'category', 'row' => 1, 'column' => 'id'), Rates::fromForm('0', array(), array(array('id' => '3', 'country' => 'IN', 'rate' => '5', 'code' => ''), array('id' => '3', 'country' => 'in', 'rate' => '12', 'code' => '')))[2]);
 foreach (array(
     'a bad default'           => array('18.5.1', array(), array()),
     'a bad country code'      => array('0', array(array('code' => 'Germany', 'rate' => '19')), array()),
