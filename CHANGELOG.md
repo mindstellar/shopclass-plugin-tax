@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
 ### New
 - A category rate can name a buyer country, so it applies only to buyers there.
