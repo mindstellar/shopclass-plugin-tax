@@ -19,7 +19,7 @@ Works on shared hosting. It needs no cron, worker, Redis or shell. On an older c
 
 ## Set up
 
-Open Billing → Tax.
+Open Plugins → Tax → Settings.
 
 1. Prices: turn on "Listing prices already include tax" (on by default), or leave it off to add tax on top. Set Tax name (such as VAT or sales tax). Turn on "Tax delivery charges too" to tax shipping.
 2. Seller: set Seller country code, Seller state or region, Seller tax number and Tax number label.

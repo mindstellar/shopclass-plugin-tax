@@ -32,7 +32,7 @@ $text = static function (string $name, string $label, int $max, string $default 
 
 return array(
     'title'  => __('Tax', 'tax'),
-    'menu'   => 'billing',
+    'menu'   => 'plugins',
     'intro'  => __('Adds tax to every cart and order from the rates below, and prints the receipt as a tax invoice. Tax is worked out on the server, per line, and rounded to the currency\'s smallest unit.', 'tax'),
     'groups' => array(
         array(
